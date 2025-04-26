@@ -57,3 +57,13 @@ Installed exetension such as
 
  
  npm install react-native-draggable-flatlist
+
+ ------------------------------------
+ For authentication 
+ Go to the Firebase Console.
+Create a new project.
+Enable Authentication in the Firebase Console.
+Add Google as a sign-in provider (optional).
+Add your app's configuration to your project.
+
+ npm install firebase

@@ -1,23 +1,37 @@
+// filepath: d:\Downloads\tmp\front-end-project\ShopkeeperApp\app\auth\registerAndLogin.tsx
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "../../firebaseConfig";
 
-const RegisterAndLogin = () => {
+export default function RegisterAndLogin() {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth login
-    console.log("Google Login");
+  const handleEmailAuth = async () => {
+    try {
+      if (isRegister) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        Alert.alert("Success", "Account created successfully!");
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        Alert.alert("Success", "Logged in successfully!");
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      Alert.alert("Error", errorMessage);
+    }
   };
 
-  const handleEmailAuth = () => {
-    if (isRegister) {
-      // TODO: Implement Firebase registration
-      console.log("Register with Email:", email, password);
-    } else {
-      // TODO: Implement Firebase login
-      console.log("Login with Email:", email, password);
+  const handleGoogleLogin = async () => {
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      Alert.alert("Success", "Logged in with Google!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
+      Alert.alert("Error", errorMessage);
     }
   };
 
@@ -70,6 +84,4 @@ const RegisterAndLogin = () => {
       </TouchableOpacity>
     </View>
   );
-};
-
-export default RegisterAndLogin;
+}
