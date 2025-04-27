@@ -1,13 +1,26 @@
 // filepath: d:\Downloads\tmp\front-end-project\ShopkeeperApp\app\auth\registerAndLogin.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "expo-router";
 import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebaseConfig";
 
 export default function RegisterAndLogin() {
+  const router = useRouter();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Add an onAuthStateChanged listener to navigate to the dashboard after login
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        // Navigate to the Dashboard if the user is logged in
+        router.replace("/dashboard");
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup the listener
+  }, []);
 
   const handleEmailAuth = async () => {
     try {

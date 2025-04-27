@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TouchableOpacity, FlatList, Switch, TextInput, Modal } from "react-native";
+import { useRouter } from "expo-router";
 
 const Dashboard = () => {
+  const router = useRouter();
   const [venueStatus, setVenueStatus] = useState(true); // Venue status toggle
   const [counters, setCounters] = useState([
     { id: 1, name: "Counter 1", queue: 12, currentToken: 37, status: true },
