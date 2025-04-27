@@ -67,3 +67,5 @@ Add Google as a sign-in provider (optional).
 Add your app's configuration to your project.
 
  npm install firebase
+
+npm install @react-native-async-storage/async-storage

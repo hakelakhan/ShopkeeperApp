@@ -1,81 +1,135 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, FlatList, Switch, TextInput, Modal } from "react-native";
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, FlatList, Switch, TextInput, Modal, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
+import { getVenueDataByUser } from "../../src/services/venueServices"; // Use the updated function
+import { Venue, Counter } from "../../src/models/modelDefinations"; // Import the Venue and Counter interfaces
+import { getAuth } from "firebase/auth"; // Import Firebase Auth to get the user ID
 
 const Dashboard = () => {
   const router = useRouter();
-  const [venueStatus, setVenueStatus] = useState(true); // Venue status toggle
-  const [counters, setCounters] = useState([
-    { id: 1, name: "Counter 1", queue: 12, currentToken: 37, status: true },
-    { id: 2, name: "Counter 2", queue: 5, currentToken: 24, status: false },
-  ]);
+  const [venue, setVenue] = useState<Venue | null>(null); // State to hold venue data
+  const [isLoading, setIsLoading] = useState(true); // Loading state
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [newCounterName, setNewCounterName] = useState("");
   const [newCounterType, setNewCounterType] = useState("");
   const [newCounterLimit, setNewCounterLimit] = useState("");
 
+  // Fetch venue data from Firestore
+  useEffect(() => {
+    const fetchVenue = async () => {
+      try {
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+          console.error("No user is logged in.");
+          router.replace("/settings/venue"); // Redirect to venue setup if no user is logged in
+          return;
+        }
+
+        const userId = currentUser.uid; // Get the logged-in user's UID
+        const venueData = await getVenueDataByUser(userId); // Fetch venue data for the user
+
+        if (!venueData) {
+          router.replace("/settings/venue"); // Redirect to venue setup if no venue is found
+        } else {
+          setVenue(venueData); // Set the venue data
+        }
+      } catch (error) {
+        console.error("Failed to fetch venue data:", error);
+        router.replace("/settings/venue"); // Redirect to venue setup if fetching fails
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVenue();
+  }, []);
+
   const toggleVenueStatus = () => {
-    setVenueStatus((prevStatus) => !prevStatus);
+    if (venue) {
+      setVenue({ ...venue, status: !venue.status });
+    }
   };
 
-  const toggleCounterStatus = (id) => {
-    setCounters((prevCounters) =>
-      prevCounters.map((counter) =>
-        counter.id === id ? { ...counter, status: !counter.status } : counter
-      )
-    );
+  const toggleCounterStatus = (id: number) => {
+    if (venue) {
+      const updatedCounters = venue.counters.map((counter) =>
+        counter.id === id ? { ...counter, isActive: !counter.isActive } : counter
+      );
+      setVenue({ ...venue, counters: updatedCounters });
+    }
   };
 
   const addCounter = () => {
-    const newCounterId = counters.length + 1;
-    setCounters([
-      ...counters,
-      {
+    if (venue) {
+      const newCounterId = venue.counters.length + 1;
+      const newCounter: Counter = {
         id: newCounterId,
         name: newCounterName || `Counter ${newCounterId}`,
-        queue: 0,
-        currentToken: 0,
-        status: true,
         type: newCounterType || "General",
-        maxLimit: newCounterLimit || "Unlimited",
-      },
-    ]);
-    setNewCounterName("");
-    setNewCounterType("");
-    setNewCounterLimit("");
-    setIsModalVisible(false);
+        isActive: true,
+        qrString: `https://example.com/qr/counter${newCounterId}`,
+        queue: {
+          id: 100 + newCounterId,
+          length: 0,
+          currentToken: 0,
+        },
+      };
+      setVenue({ ...venue, counters: [...venue.counters, newCounter] });
+      setNewCounterName("");
+      setNewCounterType("");
+      setNewCounterLimit("");
+      setIsModalVisible(false);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-base-100">
+        <ActivityIndicator size="large" color="#4F46E5" />
+      </View>
+    );
+  }
+
+  if (!venue) {
+    return (
+      <View className="flex-1 justify-center items-center bg-base-100">
+        <Text className="text-lg font-bold">Failed to load venue data.</Text>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-base-100">
       {/* Top Bar */}
       <View className="bg-primary py-4 px-6 flex-row justify-between items-center">
-        <Text className="text-white text-2xl font-bold">🏷️ Sai Baba Temple</Text>
+        <Text className="text-white text-2xl font-bold">🏷️ {venue.name}</Text>
         <View className="flex-row items-center">
-          <Text className="text-white text-lg mr-2">{venueStatus ? "🟢 Online" : "🔴 Offline"}</Text>
+          <Text className="text-white text-lg mr-2">{venue.status ? "🟢 Online" : "🔴 Offline"}</Text>
           <Switch
-            value={venueStatus}
+            value={venue.status}
             onValueChange={toggleVenueStatus}
             trackColor={{ false: "#767577", true: "#4F46E5" }}
-            thumbColor={venueStatus ? "#FFFFFF" : "#f4f3f4"}
+            thumbColor={venue.status ? "#FFFFFF" : "#f4f3f4"}
           />
         </View>
       </View>
 
       {/* Counter List */}
       <FlatList
-        data={counters}
+        data={venue.counters}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View className="flex-row justify-between items-center px-6 py-4 border-b border-neutral">
             <Text className="text-lg font-bold">{item.name}</Text>
-            <Text className="text-neutral">| {item.queue} in Queue |</Text>
-            <Text className="text-neutral">🔢 {item.currentToken}</Text>
+            <Text className="text-neutral">| {item.queue.length} in Queue |</Text>
+            <Text className="text-neutral">🔢 {item.queue.currentToken}</Text>
             <Switch
-              value={item.status}
+              value={item.isActive}
               onValueChange={() => toggleCounterStatus(item.id)}
               trackColor={{ false: "#767577", true: "#4F46E5" }}
-              thumbColor={item.status ? "#FFFFFF" : "#f4f3f4"}
+              thumbColor={item.isActive ? "#FFFFFF" : "#f4f3f4"}
             />
           </View>
         )}

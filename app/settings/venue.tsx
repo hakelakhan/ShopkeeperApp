@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, FlatList } from "react-native";
 import { Picker } from "@react-native-picker/picker";
+import { writeVenueData } from "../../src//services/venueServices"; // Import the writeVenueData function
+import { Venue } from "../../src/models/modelDefinations"; // Import the Venue interface
+import { getAuth } from "firebase/auth"; // Import Firebase Auth
 
 const VenueSetup = () => {
   const [step, setStep] = useState(1);
@@ -31,18 +34,55 @@ const VenueSetup = () => {
     }
   };
 
-  const saveSettings = () => {
-    // TODO: Save venue settings to the backend or database
-    console.log({
-      venueName,
-      venueType,
-      venueCity,
-      openingTime,
-      closingTime,
-      lunchBreak,
-      holidays,
-      counters,
-    });
+  const saveSettings = async () => {
+    try {
+      // Get the currently logged-in user's UID
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        console.error("No user is logged in.");
+        return;
+      }
+
+      const userId = currentUser.uid; // Get the user's UID
+
+      // Convert wizard data into a Venue object
+      const venue: Venue = {
+        id: "", // Firestore will generate this automatically, so leave it empty
+        name: venueName,
+        address: venueCity, // Assuming venueCity is the address
+        status: true, // Default to true (open)
+        holidays: holidays, // List of holidays
+        lunchBreak: {
+          start: lunchBreak.split(" - ")[0], // Extract start time from lunchBreak string
+          end: lunchBreak.split(" - ")[1], // Extract end time from lunchBreak string
+        },
+        counters: counters.map((counter, index) => ({
+          id: index + 1, // Generate a unique ID for each counter
+          name: counter.name,
+          type: counter.type || "General", // Default to "General" if no type is provided
+          isActive: true, // Default to active
+          qrString: `https://example.com/qr/counter${index + 1}`, // Generate a QR string
+          queue: {
+            id: 100 + index + 1, // Generate a unique queue ID
+            length: 0, // Default queue length
+            currentToken: 0, // Default current token
+          },
+        })),
+        createdBy: userId, // Add the user's UID as the creator
+        createdAt: new Date().toISOString(), // Add the current timestamp
+      };
+
+      // Call the writeVenueData function to save the venue
+      await writeVenueData(venue);
+
+      console.log("Venue settings saved successfully!");
+      // Optionally, navigate to another screen or show a success message
+    } catch (error) {
+      console.error("Failed to save venue settings:", error);
+      // Optionally, show an error message to the user
+    }
   };
 
   return (
