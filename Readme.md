@@ -69,3 +69,22 @@ Add your app's configuration to your project.
  npm install firebase
 
 npm install @react-native-async-storage/async-storage
+
+
+# npm install qrcode
+# npm install --save-dev @types/qrcode
+
+npm install react-native-qrcode-svg
+
+
+TODO List
+| Priority | Task                                                          | ETA       |
+| -------- | ------------------------------------------------------------- | --------- |
+| 1        | Cloud Function: generate QR code                              | 2–3 hrs   |
+| 2        | Shopkeeper app: call QR function                              | 1.5–2 hrs |
+| 3        | Shopkeeper app: set form fields per counter                   | 3–4 hrs   |
+| 4        | Shopkeeper app: set number of people per counter              | 1–1.5 hrs |
+| 5        | Shopkeeper app: add MPIN for core settings modification       | 1.5–2 hrs |
+| 6        | Customer form app (new repo) – dynamic form                   | 6–8 hrs   |
+| 7        | Shopkeeper app: show queue + actions (done, move, drag, etc.) | 5–7 hrs   |
+| 8        | (Optional) Announce next name via Text-to-Speech              | 1–1.5 hrs |

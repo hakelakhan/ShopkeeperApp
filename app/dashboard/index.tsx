@@ -1,48 +1,48 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, FlatList, Switch, TextInput, Modal, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, FlatList, Switch, ActivityIndicator, Modal } from "react-native";
 import { useRouter } from "expo-router";
-import { getVenueDataByUser } from "../../src/services/venueServices"; // Use the updated function
-import { Venue, Counter } from "../../src/models/modelDefinations"; // Import the Venue and Counter interfaces
-import { getAuth } from "firebase/auth"; // Import Firebase Auth to get the user ID
+import { getVenueDataByUser } from "../../src/services/venueServices";
+import { Venue, Counter } from "../../src/models/modelDefinations";
+import { getAuth } from "firebase/auth";
+import { FontAwesome } from "@expo/vector-icons";
+import QRCode from "react-native-qrcode-svg"; // Import QRCode library
 
 const Dashboard = () => {
   const router = useRouter();
-  const [venue, setVenue] = useState<Venue | null>(null); // State to hold venue data
-  const [isLoading, setIsLoading] = useState(true); // Loading state
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [newCounterName, setNewCounterName] = useState("");
-  const [newCounterType, setNewCounterType] = useState("");
-  const [newCounterLimit, setNewCounterLimit] = useState("");
+  const [venue, setVenue] = useState<Venue | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false); // State for modal visibility
+  const [selectedQRString, setSelectedQRString] = useState<string | null>(null); // State for selected QR code
 
   // Fetch venue data from Firestore
-  useEffect(() => {
-    const fetchVenue = async () => {
-      try {
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
+  const fetchVenue = async () => {
+    try {
+      const auth = getAuth();
+      const currentUser = auth.currentUser;
 
-        if (!currentUser) {
-          console.error("No user is logged in.");
-          router.replace("/settings/venue"); // Redirect to venue setup if no user is logged in
-          return;
-        }
-
-        const userId = currentUser.uid; // Get the logged-in user's UID
-        const venueData = await getVenueDataByUser(userId); // Fetch venue data for the user
-
-        if (!venueData) {
-          router.replace("/settings/venue"); // Redirect to venue setup if no venue is found
-        } else {
-          setVenue(venueData); // Set the venue data
-        }
-      } catch (error) {
-        console.error("Failed to fetch venue data:", error);
-        router.replace("/settings/venue"); // Redirect to venue setup if fetching fails
-      } finally {
-        setIsLoading(false);
+      if (!currentUser) {
+        console.error("No user is logged in.");
+        router.replace("/settings/venue");
+        return;
       }
-    };
 
+      const userId = currentUser.uid;
+      const venueData = await getVenueDataByUser(userId);
+
+      if (!venueData) {
+        router.replace("/settings/venue");
+      } else {
+        setVenue(venueData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch venue data:", error);
+      router.replace("/settings/venue");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchVenue();
   }, []);
 
@@ -61,27 +61,14 @@ const Dashboard = () => {
     }
   };
 
-  const addCounter = () => {
-    if (venue) {
-      const newCounterId = venue.counters.length + 1;
-      const newCounter: Counter = {
-        id: newCounterId,
-        name: newCounterName || `Counter ${newCounterId}`,
-        type: newCounterType || "General",
-        isActive: true,
-        qrString: `https://example.com/qr/counter${newCounterId}`,
-        queue: {
-          id: 100 + newCounterId,
-          length: 0,
-          currentToken: 0,
-        },
-      };
-      setVenue({ ...venue, counters: [...venue.counters, newCounter] });
-      setNewCounterName("");
-      setNewCounterType("");
-      setNewCounterLimit("");
-      setIsModalVisible(false);
-    }
+  const showQRCode = (qrString: string) => {
+    setSelectedQRString(qrString); // Set the selected QR code
+    setIsModalVisible(true); // Show the modal
+  };
+
+  const closeModal = () => {
+    setIsModalVisible(false); // Hide the modal
+    setSelectedQRString(null); // Clear the selected QR code
   };
 
   if (isLoading) {
@@ -125,24 +112,35 @@ const Dashboard = () => {
             <Text className="text-lg font-bold">{item.name}</Text>
             <Text className="text-neutral">| {item.queue.length} in Queue |</Text>
             <Text className="text-neutral">🔢 {item.queue.currentToken}</Text>
-            <Switch
-              value={item.isActive}
-              onValueChange={() => toggleCounterStatus(item.id)}
-              trackColor={{ false: "#767577", true: "#4F46E5" }}
-              thumbColor={item.isActive ? "#FFFFFF" : "#f4f3f4"}
-            />
+            <View className="flex-row items-center">
+              {/* QR Code Icon */}
+              <TouchableOpacity onPress={() => showQRCode(item.qrString)}>
+                <FontAwesome name="qrcode" size={24} color="#4F46E5" style={{ marginLeft: 10 }} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       />
 
       {/* Action Buttons */}
       <View className="flex-row justify-between px-6 py-4 border-t border-neutral">
+        {/* Refresh Data Button */}
         <TouchableOpacity
-          className="bg-primary py-2 px-4 rounded-lg"
-          onPress={() => setIsModalVisible(true)}
+          className="bg-secondary py-2 px-4 rounded-lg"
+          onPress={() => fetchVenue()}
         >
-          <Text className="text-white font-bold text-center">➕ Add Counter</Text>
+          <Text className="text-white font-bold text-center">🔄 Refresh</Text>
         </TouchableOpacity>
+
+        {/* Settings Button */}
+        <TouchableOpacity
+          className="bg-warning py-2 px-4 rounded-lg"
+          onPress={() => router.push("/settings/venue")}
+        >
+          <Text className="text-white font-bold text-center">⚙️ Settings</Text>
+        </TouchableOpacity>
+
+        {/* View Stats Button */}
         <TouchableOpacity
           className="bg-info py-2 px-4 rounded-lg"
           onPress={() => console.log("View Stats")}
@@ -151,44 +149,28 @@ const Dashboard = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Add Counter Modal */}
-      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+      {/* QR Code Modal */}
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={closeModal}
+      >
         <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-white rounded-lg p-6 w-4/5">
-            <Text className="text-lg font-bold mb-4">➕ Add Counter</Text>
-            <TextInput
-              className="border border-neutral rounded-lg px-4 py-2 mb-4"
-              placeholder="Counter Name"
-              value={newCounterName}
-              onChangeText={setNewCounterName}
-            />
-            <TextInput
-              className="border border-neutral rounded-lg px-4 py-2 mb-4"
-              placeholder="Counter Type (e.g., VIP, General)"
-              value={newCounterType}
-              onChangeText={setNewCounterType}
-            />
-            <TextInput
-              className="border border-neutral rounded-lg px-4 py-2 mb-4"
-              placeholder="Max Limit (Optional)"
-              value={newCounterLimit}
-              onChangeText={setNewCounterLimit}
-              keyboardType="numeric"
-            />
-            <View className="flex-row justify-between">
-              <TouchableOpacity
-                className="bg-neutral py-2 px-4 rounded-lg"
-                onPress={() => setIsModalVisible(false)}
-              >
-                <Text className="text-white font-bold">Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                className="bg-primary py-2 px-4 rounded-lg"
-                onPress={addCounter}
-              >
-                <Text className="text-white font-bold">Add</Text>
-              </TouchableOpacity>
-            </View>
+          <View className="bg-white p-6 rounded-lg items-center">
+            <Text className="text-lg font-bold mb-4">QR Code</Text>
+            {selectedQRString && (
+              <QRCode
+                value={selectedQRString} // Render the selected QR code
+                size={200} // Adjust the size as needed
+              />
+            )}
+            <TouchableOpacity
+              className="bg-primary py-2 px-4 rounded-lg mt-4"
+              onPress={closeModal}
+            >
+              <Text className="text-white font-bold">Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

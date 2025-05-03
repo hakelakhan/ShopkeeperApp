@@ -4,6 +4,8 @@ export interface Venue {
   address: string;          // Address of the venue
   status: boolean;          // Whether the venue is open (true) or closed (false)
   holidays: string[];       // List of holidays (ISO date strings, e.g., "2025-12-25")
+  openingTime: string;     // Opening time of the venue (e.g., "09:00")
+  closingTime: string;     // Closing time of the venue (e.g., "17:00")
   lunchBreak: {
     start: string;          // Start time of the lunch break (e.g., "13:00")
     end: string;            // End time of the lunch break (e.g., "14:00")

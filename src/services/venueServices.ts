@@ -1,5 +1,5 @@
 import { Venue } from "../models/modelDefinations"; // Adjust the import path as necessary
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig"; // Adjust the import path as necessary
 
 // Fetch venue data based on userId
@@ -29,6 +29,36 @@ export const writeVenueData = async (venue: Venue): Promise<void> => {
     console.log("Venue data written successfully:", venue);
   } catch (error) {
     console.error("Failed to write venue data:", error);
+    throw error; // Re-throw the error for further handling
+  }
+};
+// Service to update venue data in Firestore
+export const updateVenueDataByUser = async (venueId: string, updatedVenue: Partial<Venue>): Promise<void> => {
+  try {
+    const venueDocRef = doc(db, "venues", venueId); // Reference to the specific venue document
+    await updateDoc(venueDocRef, updatedVenue); // Update the venue document with new data
+    console.log("Venue data updated successfully:", updatedVenue);
+  } catch (error) {
+    console.error("Failed to update venue data:", error);
+    throw error; // Re-throw the error for further handling
+  }
+};
+
+// Function to write or modify venue data
+export const writeOrModifyVenueData = async (userId: string, venue: Venue): Promise<void> => {
+  try {
+    // Check if a venue exists for the user
+    const existingVenue = await getVenueDataByUser(userId);
+
+    if (existingVenue) {
+      // If a venue exists, update it
+      await updateVenueDataByUser(existingVenue.id, venue);
+    } else {
+      // If no venue exists, create a new one
+      await writeVenueData(venue);
+    }
+  } catch (error) {
+    console.error("Failed to write or modify venue data:", error);
     throw error; // Re-throw the error for further handling
   }
 };
